@@ -1,10 +1,21 @@
 import enum
-from sqlalchemy import String, Text, ForeignKey, Enum as SQLEnum, Index, DateTime, JSON, Float, Integer
+import uuid
+from datetime import datetime
+
+from sqlalchemy import (
+    String,
+    Text,
+    ForeignKey,
+    Enum as SQLEnum,
+    Index,
+    JSON,
+    Float,
+    Integer,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
-from datetime import datetime
-import uuid
+
 from app.models.base import Base
 
 
@@ -19,24 +30,46 @@ class FindingClassification(str, enum.Enum):
 class Finding(Base):
     __tablename__ = "findings"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    finding_id: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
-    case_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False)
-    investigation_run_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("investigation_runs.id"))
-    agent_run_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("agent_runs.id"))
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    finding_id: Mapped[str] = mapped_column(
+        String(50), unique=True, index=True, nullable=False
+    )
+    case_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("cases.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    investigation_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("investigation_runs.id")
+    )
+    agent_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("agent_runs.id")
+    )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
-    classification: Mapped[FindingClassification] = mapped_column(SQLEnum(FindingClassification), default=FindingClassification.OBSERVED, nullable=False)
+    classification: Mapped[FindingClassification] = mapped_column(
+        SQLEnum(FindingClassification),
+        default=FindingClassification.OBSERVED,
+        nullable=False,
+    )
     confidence: Mapped[float] = mapped_column(Float, default=0.0)
     supporting_evidence_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
     contradicting_evidence_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
     missing_information: Mapped[list[str]] = mapped_column(JSON, default=list)
     alternative_explanation: Mapped[str | None] = mapped_column(Text)
     recommended_next_step: Mapped[str | None] = mapped_column(Text)
-    derived_from_finding_ids: Mapped[list[uuid.UUID]] = mapped_column(JSON, default=list)
-    metadata: Mapped[dict] = mapped_column(JSON, default=dict)
-    created_at: Mapped[datetime] = mapped_column(default=func.now(), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(default=func.now(), onupdate=func.now(), nullable=False)
+    derived_from_finding_ids: Mapped[list[uuid.UUID]] = mapped_column(
+        JSON, default=list
+    )
+    finding_metadata: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        default=func.now(), onupdate=func.now(), nullable=False
+    )
 
     case: Mapped["Case"] = relationship("Case", back_populates="findings")
 
@@ -58,19 +91,35 @@ class DecisionAction(str, enum.Enum):
 class InvestigatorDecision(Base):
     __tablename__ = "investigator_decisions"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    decision_id: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
-    case_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False)
-    finding_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("findings.id"))
-    investigator_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    action: Mapped[DecisionAction] = mapped_column(SQLEnum(DecisionAction), nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    decision_id: Mapped[str] = mapped_column(
+        String(50), unique=True, index=True, nullable=False
+    )
+    case_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("cases.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    finding_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("findings.id")
+    )
+    investigator_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+    action: Mapped[DecisionAction] = mapped_column(
+        SQLEnum(DecisionAction), nullable=False
+    )
     rationale: Mapped[str] = mapped_column(Text, nullable=False)
     previous_state: Mapped[dict] = mapped_column(JSON, default=dict)
     new_state: Mapped[dict] = mapped_column(JSON, default=dict)
     simulated_action: Mapped[str | None] = mapped_column(String(100))
     simulated_action_params: Mapped[dict] = mapped_column(JSON, default=dict)
-    metadata: Mapped[dict] = mapped_column(JSON, default=dict)
-    created_at: Mapped[datetime] = mapped_column(default=func.now(), nullable=False)
+    decision_metadata: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        default=func.now(), nullable=False
+    )
 
     case: Mapped["Case"] = relationship("Case", back_populates="decisions")
     investigator: Mapped["User"] = relationship("User", back_populates="decisions")
@@ -97,18 +146,36 @@ class ActionType(str, enum.Enum):
 class Action(Base):
     __tablename__ = "actions"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    action_id: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
-    case_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False)
-    decision_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("investigator_decisions.id"))
-    action_type: Mapped[ActionType] = mapped_column(SQLEnum(ActionType), nullable=False)
-    target_entity_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("entities.id"))
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    action_id: Mapped[str] = mapped_column(
+        String(50), unique=True, index=True, nullable=False
+    )
+    case_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("cases.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    decision_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("investigator_decisions.id")
+    )
+    action_type: Mapped[ActionType] = mapped_column(
+        SQLEnum(ActionType), nullable=False
+    )
+    target_entity_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("entities.id")
+    )
     status: Mapped[str] = mapped_column(String(50), default="PENDING")
     parameters: Mapped[dict] = mapped_column(JSON, default=dict)
     result: Mapped[dict | None] = mapped_column(JSON)
-    executed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
+    executed_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id")
+    )
     executed_at: Mapped[datetime | None] = mapped_column()
-    created_at: Mapped[datetime] = mapped_column(default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        default=func.now(), nullable=False
+    )
 
     case: Mapped["Case"] = relationship("Case")
     decision: Mapped["InvestigatorDecision"] = relationship("InvestigatorDecision")
@@ -131,12 +198,26 @@ class InvestigationRunStatus(str, enum.Enum):
 class InvestigationRun(Base):
     __tablename__ = "investigation_runs"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    investigation_run_id: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
-    case_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False)
-    started_at: Mapped[datetime] = mapped_column(default=func.now(), nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    investigation_run_id: Mapped[str] = mapped_column(
+        String(50), unique=True, index=True, nullable=False
+    )
+    case_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("cases.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    started_at: Mapped[datetime] = mapped_column(
+        default=func.now(), nullable=False
+    )
     completed_at: Mapped[datetime | None] = mapped_column()
-    status: Mapped[InvestigationRunStatus] = mapped_column(SQLEnum(InvestigationRunStatus), default=InvestigationRunStatus.QUEUED, nullable=False)
+    status: Mapped[InvestigationRunStatus] = mapped_column(
+        SQLEnum(InvestigationRunStatus),
+        default=InvestigationRunStatus.QUEUED,
+        nullable=False,
+    )
     agents_executed: Mapped[list[str]] = mapped_column(JSON, default=list)
     inputs: Mapped[dict] = mapped_column(JSON, default=dict)
     outputs: Mapped[dict] = mapped_column(JSON, default=dict)
@@ -149,10 +230,14 @@ class InvestigationRun(Base):
     risk_engine_version: Mapped[str] = mapped_column(String(50), default="1.0")
     fraud_rules_version: Mapped[str] = mapped_column(String(50), default="1.0")
     duration_seconds: Mapped[float | None] = mapped_column(Float)
-    metadata: Mapped[dict] = mapped_column(JSON, default=dict)
+    run_metadata: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
 
     case: Mapped["Case"] = relationship("Case", back_populates="investigation_runs")
-    agent_runs: Mapped[list["AgentRun"]] = relationship("AgentRun", back_populates="investigation_run", cascade="all, delete-orphan")
+    agent_runs: Mapped[list["AgentRun"]] = relationship(
+        "AgentRun",
+        back_populates="investigation_run",
+        cascade="all, delete-orphan",
+    )
 
     __table_args__ = (
         Index("ix_inv_runs_case_status", "case_id", "status"),
@@ -186,11 +271,23 @@ class AgentType(str, enum.Enum):
 class AgentRun(Base):
     __tablename__ = "agent_runs"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    agent_run_id: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
-    investigation_run_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("investigation_runs.id", ondelete="CASCADE"), nullable=False)
-    agent_type: Mapped[AgentType] = mapped_column(SQLEnum(AgentType), nullable=False)
-    status: Mapped[AgentRunStatus] = mapped_column(SQLEnum(AgentRunStatus), default=AgentRunStatus.QUEUED, nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    agent_run_id: Mapped[str] = mapped_column(
+        String(50), unique=True, index=True, nullable=False
+    )
+    investigation_run_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("investigation_runs.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    agent_type: Mapped[AgentType] = mapped_column(
+        SQLEnum(AgentType), nullable=False
+    )
+    status: Mapped[AgentRunStatus] = mapped_column(
+        SQLEnum(AgentRunStatus), default=AgentRunStatus.QUEUED, nullable=False
+    )
     task: Mapped[str] = mapped_column(Text)
     input_data: Mapped[dict] = mapped_column(JSON, default=dict)
     output_data: Mapped[dict] = mapped_column(JSON, default=dict)
@@ -202,9 +299,11 @@ class AgentRun(Base):
     started_at: Mapped[datetime | None] = mapped_column()
     completed_at: Mapped[datetime | None] = mapped_column()
     duration_seconds: Mapped[float | None] = mapped_column(Float)
-    metadata: Mapped[dict] = mapped_column(JSON, default=dict)
+    agent_metadata: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
 
-    investigation_run: Mapped["InvestigationRun"] = relationship("InvestigationRun", back_populates="agent_runs")
+    investigation_run: Mapped["InvestigationRun"] = relationship(
+        "InvestigationRun", back_populates="agent_runs"
+    )
 
     __table_args__ = (
         Index("ix_agent_runs_inv_run", "investigation_run_id"),
@@ -230,11 +329,21 @@ class AuditAction(str, enum.Enum):
 class AuditLog(Base):
     __tablename__ = "audit_logs"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    log_id: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
-    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
-    case_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("cases.id"))
-    evidence_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("evidence.id"))
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    log_id: Mapped[str] = mapped_column(
+        String(50), unique=True, index=True, nullable=False
+    )
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id")
+    )
+    case_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("cases.id")
+    )
+    evidence_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("evidence.id")
+    )
     action: Mapped[AuditAction] = mapped_column(SQLEnum(AuditAction), nullable=False)
     resource_type: Mapped[str] = mapped_column(String(50), nullable=False)
     resource_id: Mapped[str | None] = mapped_column(String(100))
@@ -244,7 +353,9 @@ class AuditLog(Base):
     ip_address: Mapped[str | None] = mapped_column(String(45))
     user_agent: Mapped[str | None] = mapped_column(Text)
     request_id: Mapped[str | None] = mapped_column(String(100))
-    timestamp: Mapped[datetime] = mapped_column(default=func.now(), nullable=False, index=True)
+    timestamp: Mapped[datetime] = mapped_column(
+        default=func.now(), nullable=False, index=True
+    )
 
     user: Mapped["User"] = relationship("User", back_populates="audit_logs")
     case: Mapped["Case"] = relationship("Case", back_populates="audit_logs")
@@ -273,20 +384,36 @@ class ReportStatus(str, enum.Enum):
 class Report(Base):
     __tablename__ = "reports"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    report_id: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
-    case_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False)
-    generated_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    report_id: Mapped[str] = mapped_column(
+        String(50), unique=True, index=True, nullable=False
+    )
+    case_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("cases.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    generated_by: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
     format: Mapped[ReportFormat] = mapped_column(SQLEnum(ReportFormat), nullable=False)
-    status: Mapped[ReportStatus] = mapped_column(SQLEnum(ReportStatus), default=ReportStatus.GENERATING, nullable=False)
+    status: Mapped[ReportStatus] = mapped_column(
+        SQLEnum(ReportStatus), default=ReportStatus.GENERATING, nullable=False
+    )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     content: Mapped[str | None] = mapped_column(Text)
     file_path: Mapped[str | None] = mapped_column(String(500))
     file_size: Mapped[int | None] = mapped_column()
     sections: Mapped[list[str]] = mapped_column(JSON, default=list)
-    investigation_run_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("investigation_runs.id"))
-    metadata: Mapped[dict] = mapped_column(JSON, default=dict)
-    created_at: Mapped[datetime] = mapped_column(default=func.now(), nullable=False)
+    investigation_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("investigation_runs.id")
+    )
+    report_metadata: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        default=func.now(), nullable=False
+    )
     completed_at: Mapped[datetime | None] = mapped_column()
 
     case: Mapped["Case"] = relationship("Case", back_populates="reports")
