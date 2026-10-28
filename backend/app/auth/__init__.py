@@ -1,0 +1,51 @@
+from app.auth.router import router as auth_router
+from app.auth.dependencies import (
+    get_current_user,
+    get_current_active_user,
+    get_current_superuser,
+    RoleChecker,
+    require_admin,
+    require_lead_investigator,
+    require_investigator,
+    require_analyst,
+)
+from app.auth.schemas import (
+    User, UserCreate, UserUpdate, Token, TokenData,
+    LoginRequest, RegisterRequest, PasswordChangeRequest,
+    PasswordResetRequest, PasswordResetConfirm,
+    MFASetupResponse, MFAVerifyRequest, MFAVerifyResponse,
+    TokenRefresh, RefreshTokenResponse, PasswordChangeRequest
+)
+from app.auth.security import verify_password, get_password_hash, create_access_token, create_refresh_token, verify_token
+
+__all__ = [
+    "auth_router",
+    "get_current_user",
+    "get_current_active_user",
+    "get_current_superuser",
+    "RoleChecker",
+    "require_admin",
+    "require_lead_investigator",
+    "require_investigator",
+    "require_analyst",
+    "User",
+    "UserCreate",
+    "UserUpdate",
+    "Token",
+    "TokenData",
+    "LoginRequest",
+    "RegisterRequest",
+    "PasswordChangeRequest",
+    "PasswordResetRequest",
+    "PasswordResetConfirm",
+    "MFASetupResponse",
+    "MFAVerifyRequest",
+    "MFAVerifyResponse",
+    "TokenRefresh",
+    "RefreshTokenResponse",
+    "verify_password",
+    "get_password_hash",
+    "create_access_token",
+    "create_refresh_token",
+    "verify_token",
+]
