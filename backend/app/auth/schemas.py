@@ -1,14 +1,14 @@
-from pydantic import BaseModel, EmailStr
-from typing import Optional, List
 from datetime import datetime
+from typing import Optional, List
 import uuid
+
+from pydantic import BaseModel, EmailStr
 
 
 class UserBase(BaseModel):
     email: EmailStr
     username: str
     full_name: Optional[str] = None
-    role: str = "ANALYST"
 
 
 class UserCreate(UserBase):
@@ -17,60 +17,43 @@ class UserCreate(UserBase):
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
+    username: Optional[str] = None
     full_name: Optional[str] = None
     is_active: Optional[bool] = None
-    role: Optional[str] = None
 
 
-class UserInDB(BaseModel):
+class UserInDB(UserBase):
     id: uuid.UUID
-    email: EmailStr
-    username: str
-    full_name: Optional[str] = None
-    hashed_password: str
-    role: str
-    is_active: bool
-    is_superuser: bool
-    last_login: Optional[datetime] = None
-    created_at: datetime
-    updated_at: datetime
+    is_active: bool = True
+    is_superuser: bool = False
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
 
 
-class User(BaseModel):
-    id: uuid.UUID
-    email: EmailStr
-    username: str
-    full_name: Optional[str] = None
-    role: str
-    is_active: bool
-    is_superuser: bool
-    last_login: Optional[datetime] = None
-    created_at: datetime
-    updated_at: datetime
-
-    class Config:
-        from_attributes = True
+class User(UserInDB):
+    pass
 
 
 class Token(BaseModel):
     access_token: str
-    refresh_token: str
+    refresh_token: Optional[str] = None
     token_type: str = "bearer"
-    requires_mfa: bool = False
-    user_id: Optional[str] = None
+    expires_in: Optional[int] = None
 
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
 
 
+# Backward compatibility for existing imports
+TokenRefresh = RefreshTokenRequest
+
+
 class TokenData(BaseModel):
-    user_id: Optional[uuid.UUID] = None
-    username: Optional[str] = None
-    role: Optional[str] = None
+    user_id: Optional[str] = None
 
 
 class LoginRequest(BaseModel):
@@ -104,16 +87,12 @@ class PasswordResetConfirm(BaseModel):
 
 class MFASetupResponse(BaseModel):
     secret: str
-    qr_code: str
-    backup_codes: List[str]
+    provisioning_uri: str
 
 
 class MFAVerifyRequest(BaseModel):
-    user_id: str
     code: str
 
 
 class MFAVerifyResponse(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
+    verified: bool
