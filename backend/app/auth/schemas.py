@@ -63,7 +63,7 @@ class Token(BaseModel):
     user_id: Optional[str] = None
 
 
-class TokenRefresh(BaseModel):
+class RefreshTokenRequest(BaseModel):
     refresh_token: str
 
 
