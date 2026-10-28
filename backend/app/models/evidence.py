@@ -1,10 +1,21 @@
 import enum
-from sqlalchemy import String, Text, ForeignKey, Enum as SQLEnum, Index, DateTime, JSON, BigInteger, Integer
+import uuid
+from datetime import datetime
+
+from sqlalchemy import (
+    String,
+    Text,
+    ForeignKey,
+    Enum as SQLEnum,
+    Index,
+    DateTime,
+    JSON,
+    BigInteger,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
-from datetime import datetime
-import uuid
+
 from app.models.base import Base
 
 
@@ -43,31 +54,115 @@ class IntegrityStatus(str, enum.Enum):
 class Evidence(Base):
     __tablename__ = "evidence"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    evidence_id: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
-    case_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+
+    evidence_id: Mapped[str] = mapped_column(
+        String(50),
+        unique=True,
+        index=True,
+        nullable=False,
+    )
+
+    case_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("cases.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
     source: Mapped[str] = mapped_column(String(255), nullable=False)
-    evidence_type: Mapped[EvidenceType] = mapped_column(SQLEnum(EvidenceType), nullable=False)
-    original_filename: Mapped[str] = mapped_column(String(500), nullable=False)
+
+    evidence_type: Mapped[EvidenceType] = mapped_column(
+        SQLEnum(EvidenceType),
+        nullable=False,
+    )
+
+    original_filename: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False,
+    )
+
     content: Mapped[str | None] = mapped_column(Text)
-    timestamp: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    entity_references: Mapped[dict] = mapped_column(JSON, default=dict)
-    hash: Mapped[str] = mapped_column(String(64), nullable=False)
-    hash_algorithm: Mapped[str] = mapped_column(String(20), default="SHA-256", nullable=False)
-    integrity_status: Mapped[IntegrityStatus] = mapped_column(SQLEnum(IntegrityStatus), default=IntegrityStatus.PENDING, nullable=False)
+
+    timestamp: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+    )
+
+    entity_references: Mapped[dict] = mapped_column(
+        JSON,
+        default=dict,
+    )
+
+    hash: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+    )
+
+    hash_algorithm: Mapped[str] = mapped_column(
+        String(20),
+        default="SHA-256",
+        nullable=False,
+    )
+
+    integrity_status: Mapped[IntegrityStatus] = mapped_column(
+        SQLEnum(IntegrityStatus),
+        default=IntegrityStatus.PENDING,
+        nullable=False,
+    )
+
     reliability: Mapped[float] = mapped_column(default=1.0)
+
     relevance: Mapped[float] = mapped_column(default=0.5)
-    collector_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
-    imported_at: Mapped[datetime] = mapped_column(default=func.now(), nullable=False)
-    metadata: Mapped[dict] = mapped_column(JSON, default=dict)
-    storage_reference: Mapped[str | None] = mapped_column(String(500))
-    classification: Mapped[EvidenceClassification] = mapped_column(SQLEnum(EvidenceClassification), default=EvidenceClassification.INTERNAL)
+
+    collector_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id"),
+    )
+
+    imported_at: Mapped[datetime] = mapped_column(
+        default=func.now(),
+        nullable=False,
+    )
+
+    # Python attribute renamed because SQLAlchemy reserves "metadata".
+    # The database column remains named "metadata".
+    evidence_metadata: Mapped[dict] = mapped_column(
+        "metadata",
+        JSON,
+        default=dict,
+    )
+
+    storage_reference: Mapped[str | None] = mapped_column(
+        String(500),
+    )
+
+    classification: Mapped[EvidenceClassification] = mapped_column(
+        SQLEnum(EvidenceClassification),
+        default=EvidenceClassification.INTERNAL,
+    )
+
     file_size: Mapped[int | None] = mapped_column(BigInteger)
+
     mime_type: Mapped[str | None] = mapped_column(String(100))
 
-    case: Mapped["Case"] = relationship("Case", back_populates="evidence")
-    collector: Mapped["User"] = relationship("User", back_populates="evidence_uploaded")
-    access_history: Mapped[list["EvidenceAccess"]] = relationship("EvidenceAccess", back_populates="evidence", cascade="all, delete-orphan")
+    case: Mapped["Case"] = relationship(
+        "Case",
+        back_populates="evidence",
+    )
+
+    collector: Mapped["User"] = relationship(
+        "User",
+        back_populates="evidence_uploaded",
+    )
+
+    access_history: Mapped[list["EvidenceAccess"]] = relationship(
+        "EvidenceAccess",
+        back_populates="evidence",
+        cascade="all, delete-orphan",
+    )
 
     __table_args__ = (
         Index("ix_evidence_case_type", "case_id", "evidence_type"),
@@ -80,19 +175,59 @@ class Evidence(Base):
 class EvidenceAccess(Base):
     __tablename__ = "evidence_access"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    evidence_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("evidence.id", ondelete="CASCADE"), nullable=False)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    action: Mapped[str] = mapped_column(String(50), nullable=False)
-    timestamp: Mapped[datetime] = mapped_column(default=func.now(), nullable=False)
-    ip_address: Mapped[str | None] = mapped_column(String(45))
-    user_agent: Mapped[str | None] = mapped_column(Text)
-    details: Mapped[dict] = mapped_column(JSON, default=dict)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
 
-    evidence: Mapped["Evidence"] = relationship("Evidence", back_populates="access_history")
+    evidence_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("evidence.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id"),
+        nullable=False,
+    )
+
+    action: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+
+    timestamp: Mapped[datetime] = mapped_column(
+        default=func.now(),
+        nullable=False,
+    )
+
+    ip_address: Mapped[str | None] = mapped_column(String(45))
+
+    user_agent: Mapped[str | None] = mapped_column(Text)
+
+    details: Mapped[dict] = mapped_column(
+        JSON,
+        default=dict,
+    )
+
+    evidence: Mapped["Evidence"] = relationship(
+        "Evidence",
+        back_populates="access_history",
+    )
+
     user: Mapped["User"] = relationship("User")
 
     __table_args__ = (
-        Index("ix_evidence_access_evidence_time", "evidence_id", "timestamp"),
-        Index("ix_evidence_access_user_time", "user_id", "timestamp"),
+        Index(
+            "ix_evidence_access_evidence_time",
+            "evidence_id",
+            "timestamp",
+        ),
+        Index(
+            "ix_evidence_access_user_time",
+            "user_id",
+            "timestamp",
+        ),
     )
