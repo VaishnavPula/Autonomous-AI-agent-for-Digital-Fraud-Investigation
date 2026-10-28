@@ -93,8 +93,8 @@ class Transaction(Base):
     risk_score: Mapped[float] = mapped_column(Float, default=0.0)
     risk_factors: Mapped[dict] = mapped_column(JSON, default=dict)
 
-    # "metadata" is reserved by SQLAlchemy.
-    # Keep the database column name but use a different Python attribute.
+    # Use a different Python attribute because SQLAlchemy reserves "metadata".
+    # The database column remains named "metadata".
     transaction_metadata: Mapped[dict] = mapped_column(
         "metadata",
         JSON,
